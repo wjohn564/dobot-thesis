@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/calibration/archive" />
+      <excludeFolder url="file://$MODULE_DIR$/calibration/capture_logs" />
+      <excludeFolder url="file://$MODULE_DIR$/calibration/images" />
+      <excludeFolder url="file://$MODULE_DIR$/calibration/previews" />
+      <excludeFolder url="file://$MODULE_DIR$/dataset_raw" />
+      <excludeFolder url="file://$MODULE_DIR$/runs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/images" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/logs" />
+      <excludeFolder url="file://$MODULE_DIR$/runs/previews" />
+    </content>
+    <orderEntry type="jdk" jdkName="SSH (sftp://john@john@dobotpi.local:22/home/john/.virtualenvs/dobot-thesis/bin/python)" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
