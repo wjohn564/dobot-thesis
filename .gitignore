@@ -44,3 +44,18 @@ calibration/capture_logs/
 # Archived calibration outputs
 
 calibration/archive/
+
+# Generated visualisations
+
+generated_visuals/
+
+# Generated train, validation, and test dataset
+
+dataset_split/
+
+# Pretrained model weights
+models/pretrained/
+
+
+# Generated OpenCV mask visualisations
+generated_visuals/opencv_masks/
