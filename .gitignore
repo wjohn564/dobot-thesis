@@ -8,6 +8,7 @@ venv/
 # PyCharm / IDE
 
 .idea/
+*.iml
 .vscode/
 
 # Environment files and secrets
