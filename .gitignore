@@ -1,33 +1,46 @@
 # Python
-__pycache__/
+
+**/__pycache__/
 *.py[cod]
 .venv/
 venv/
 
 # PyCharm / IDE
+
 .idea/
 .vscode/
 
 # Environment files and secrets
+
 .env
 .env.*
 *.pem
 *.key
 
 # Operating system files
+
 .DS_Store
 Thumbs.db
 
 # Runtime experiment outputs
+
 runs/
 
 # Raw dataset is stored separately
+
 dataset_raw/
 
+# Generated dataset annotation outputs
+
+dataset_annotated_bootstrap/
+dataset_annotation_previews/
+
 # Generated calibration images and logs
+
 calibration/images/
 calibration/previews/
 calibration/capture_logs/
 
 # Archived calibration outputs
+
 calibration/archive/

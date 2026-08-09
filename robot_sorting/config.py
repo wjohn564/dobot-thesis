@@ -17,8 +17,19 @@ class Pose:
     r: float = 0.0
 
 
-# The file paths for the raspberry pi project directory
-PROJECT_ROOT = Path("/home/john/dobot-thesis")
+# The project root is calculated from this file's location.
+#
+# config.py is located at:
+# dobot-thesis/robot_sorting/config.py
+#
+# Therefore parents[1] gives:
+# dobot-thesis/
+#
+# On the Raspberry Pi this resolves to:
+# /home/john/dobot-thesis
+#
+# On Windows it resolves to wherever the repository is cloned.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 RUN_DIR = PROJECT_ROOT / "runs"
 IMAGE_DIR = RUN_DIR / "images"
@@ -77,7 +88,10 @@ for path in [
     PREVIEW_DIR,
     LOG_DIR,
 ]:
-    path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
 # Camera
 # resolution is 1920x1080
@@ -235,6 +249,7 @@ VERIFY_AFTER_PICK = True
 
 def ensure_runtime_config_ready():
     """Checks that essential robot positions have actually been configured before sorting starts."""
+
     if CAMERA_CLEAR_POSE is None:
         raise RuntimeError(
             "CAMERA_CLEAR_POSE is not configured in "
