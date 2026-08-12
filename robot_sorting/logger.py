@@ -6,14 +6,13 @@ from typing import List, Optional
 from robot_sorting import config as cfg
 from robot_sorting.types import Detection
 
-# This file is used to log all the data from the experiment.
-
-
-# The list of columns that will appear in detections.csv
+# detections.csv columns
 DETECTION_FIELDS = [
     "run_id",
     "timestamp",
     "method",
+    "scene_id",
+    "repetition",
     "cycle",
     "stage",
     "image_name",
@@ -35,12 +34,13 @@ DETECTION_FIELDS = [
     "inference_time_ms",
 ]
 
-# The list of columns that will appear in attempts.csv
-
+# attempts.csv columns
 ATTEMPT_FIELDS = [
     "run_id",
     "timestamp",
     "method",
+    "scene_id",
+    "repetition",
     "cycle",
     "pre_image_name",
     "pre_preview_name",
@@ -60,37 +60,123 @@ ATTEMPT_FIELDS = [
     "attempted",
     "auto_success",
     "manual_success",
+    "correct_bin",
+    "notes",
+]
+
+# run_summary.csv columns
+RUN_SUMMARY_FIELDS = [
+    "run_id",
+    "timestamp",
+    "method",
+    "scene_id",
+    "repetition",
+    "scene_success",
+    "blocks_remaining",
     "notes",
 ]
 
 
 class ExperimentLogger:
-    """ Logger for the experiment."""
+    """Log one physical experiment run."""
 
-    def __init__(self, method: str):
-        # Generate a unique run ID based on the current date and time
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.run_id = f"{method}_{timestamp}"
-        # save method
+    def __init__(
+            self,
+            method: str,
+            scene_id: str,
+            repetition: int,
+    ):
+        # Run metadata.
         self.method = method
-        # Create a log folder for this run
-        self.run_log_dir = cfg.LOG_DIR / self.run_id
-        self.run_log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Define the CSV paths for detections and attempts
-        self.detections_csv = self.run_log_dir / "detections.csv"
-        self.attempts_csv = self.run_log_dir / "attempts.csv"
+        self.scene_id = (
+            str(scene_id)
+            .strip()
+            .lower()
+        )
 
-        print(f"Run ID: {self.run_id}")
-        print(f"Logs: {self.run_log_dir}")
+        self.repetition = int(
+            repetition
+        )
+
+        if not self.scene_id:
+            raise ValueError(
+                "scene_id cannot be empty."
+            )
+
+        if self.repetition < 1:
+            raise ValueError(
+                "repetition must be 1 or greater."
+            )
+
+        # Unique run ID.
+        timestamp = datetime.now().strftime(
+            "%Y%m%d_%H%M%S"
+        )
+
+        self.run_id = (
+            f"{method}_"
+            f"{self.scene_id}_"
+            f"r{self.repetition:02d}_"
+            f"{timestamp}"
+        )
+
+        # Create the run log folder.
+        self.run_log_dir = (
+                cfg.LOG_DIR
+                / self.run_id
+        )
+
+        self.run_log_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        # CSV output paths.
+        self.detections_csv = (
+                self.run_log_dir
+                / "detections.csv"
+        )
+
+        self.attempts_csv = (
+                self.run_log_dir
+                / "attempts.csv"
+        )
+
+        # One summary row for the full scene.
+        self.run_summary_csv = (
+                self.run_log_dir
+                / "run_summary.csv"
+        )
+
+        print(
+            f"Run ID: {self.run_id}"
+        )
+
+        print(
+            f"Logs: {self.run_log_dir}"
+        )
 
     @staticmethod
-    def _append_row(path: Path, fieldnames, row):
-        """Append a row to a CSV file, creating the file if it doesn't exist."""
+    def _append_row(
+            path: Path,
+            fieldnames,
+            row,
+    ):
+        """Append one row to a CSV file."""
+
         file_exists = path.exists()
 
-        with open(path, "a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+        with open(
+                path,
+                "a",
+                newline="",
+                encoding="utf-8",
+        ) as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=fieldnames,
+            )
 
             if not file_exists:
                 writer.writeheader()
@@ -107,36 +193,63 @@ class ExperimentLogger:
             inference_time_ms: float,
             selected: Optional[Detection] = None,
     ):
-        """This writes information about all detections in one image."""
-        timestamp = datetime.now().isoformat(timespec="seconds")
+        """Log all detections from one image."""
+
+        timestamp = datetime.now().isoformat(
+            timespec="seconds"
+        )
 
         for i, det in enumerate(detections):
             row = {
                 "run_id": self.run_id,
                 "timestamp": timestamp,
                 "method": self.method,
+                "scene_id": self.scene_id,
+                "repetition": self.repetition,
                 "cycle": cycle,
                 "stage": stage,
                 "image_name": image_name,
                 "preview_name": preview_name,
                 "detection_index": i,
-                "selected": int(det is selected),
+                "selected": int(
+                    det is selected
+                ),
                 "class_name": det.class_name,
-                "confidence": f"{det.confidence:.4f}",
+                "confidence": (
+                    f"{det.confidence:.4f}"
+                ),
                 "bbox_x": det.bbox_x,
                 "bbox_y": det.bbox_y,
                 "bbox_w": det.bbox_w,
                 "bbox_h": det.bbox_h,
                 "u": f"{det.u:.3f}",
                 "v": f"{det.v:.3f}",
-                "robot_x": "" if det.robot_x is None else f"{det.robot_x:.3f}",
-                "robot_y": "" if det.robot_y is None else f"{det.robot_y:.3f}",
-                "bin_name": "" if det.bin_name is None else det.bin_name,
+                "robot_x": (
+                    ""
+                    if det.robot_x is None
+                    else f"{det.robot_x:.3f}"
+                ),
+                "robot_y": (
+                    ""
+                    if det.robot_y is None
+                    else f"{det.robot_y:.3f}"
+                ),
+                "bin_name": (
+                    ""
+                    if det.bin_name is None
+                    else det.bin_name
+                ),
                 "area": f"{det.area:.3f}",
-                "inference_time_ms": f"{inference_time_ms:.3f}",
+                "inference_time_ms": (
+                    f"{inference_time_ms:.3f}"
+                ),
             }
 
-            self._append_row(self.detections_csv, DETECTION_FIELDS, row)
+            self._append_row(
+                self.detections_csv,
+                DETECTION_FIELDS,
+                row,
+            )
 
     def log_attempt(
             self,
@@ -153,10 +266,15 @@ class ExperimentLogger:
             cycle_time_ms: float,
             attempted: bool,
             auto_success,
+            manual_success,
+            correct_bin,
             notes: str,
     ):
-        """Log an entire pick attempt."""
-        timestamp = datetime.now().isoformat(timespec="seconds")
+        """Log one pick attempt."""
+
+        timestamp = datetime.now().isoformat(
+            timespec="seconds"
+        )
 
         if selected is None:
             selected_colour = ""
@@ -165,18 +283,44 @@ class ExperimentLogger:
             selected_v = ""
             selected_robot_x = ""
             selected_robot_y = ""
+
         else:
-            selected_colour = selected.class_name
-            selected_bin = "" if selected.bin_name is None else selected.bin_name
-            selected_u = f"{selected.u:.3f}"
-            selected_v = f"{selected.v:.3f}"
-            selected_robot_x = "" if selected.robot_x is None else f"{selected.robot_x:.3f}"
-            selected_robot_y = "" if selected.robot_y is None else f"{selected.robot_y:.3f}"
+            selected_colour = (
+                selected.class_name
+            )
+
+            selected_bin = (
+                ""
+                if selected.bin_name is None
+                else selected.bin_name
+            )
+
+            selected_u = (
+                f"{selected.u:.3f}"
+            )
+
+            selected_v = (
+                f"{selected.v:.3f}"
+            )
+
+            selected_robot_x = (
+                ""
+                if selected.robot_x is None
+                else f"{selected.robot_x:.3f}"
+            )
+
+            selected_robot_y = (
+                ""
+                if selected.robot_y is None
+                else f"{selected.robot_y:.3f}"
+            )
 
         row = {
             "run_id": self.run_id,
             "timestamp": timestamp,
             "method": self.method,
+            "scene_id": self.scene_id,
+            "repetition": self.repetition,
             "cycle": cycle,
             "pre_image_name": pre_image_name,
             "pre_preview_name": pre_preview_name,
@@ -190,13 +334,77 @@ class ExperimentLogger:
             "selected_v": selected_v,
             "selected_robot_x": selected_robot_x,
             "selected_robot_y": selected_robot_y,
-            "inference_time_ms": f"{inference_time_ms:.3f}",
-            "verify_inference_time_ms": f"{verify_inference_time_ms:.3f}",
-            "cycle_time_ms": f"{cycle_time_ms:.3f}",
-            "attempted": int(attempted),
-            "auto_success": "" if auto_success is None else int(bool(auto_success)),
-            "manual_success": "",
+            "inference_time_ms": (
+                f"{inference_time_ms:.3f}"
+            ),
+            "verify_inference_time_ms": (
+                f"{verify_inference_time_ms:.3f}"
+            ),
+            "cycle_time_ms": (
+                f"{cycle_time_ms:.3f}"
+            ),
+            "attempted": int(
+                attempted
+            ),
+            "auto_success": (
+                ""
+                if auto_success is None
+                else int(
+                    bool(auto_success)
+                )
+            ),
+            "manual_success": (
+                ""
+                if manual_success is None
+                else int(
+                    bool(manual_success)
+                )
+            ),
+            "correct_bin": (
+                ""
+                if correct_bin is None
+                else int(
+                    bool(correct_bin)
+                )
+            ),
             "notes": notes,
         }
 
-        self._append_row(self.attempts_csv, ATTEMPT_FIELDS, row)
+        self._append_row(
+            self.attempts_csv,
+            ATTEMPT_FIELDS,
+            row,
+        )
+
+    def log_run_summary(
+            self,
+            scene_success: bool,
+            blocks_remaining: int,
+            notes: str = "",
+    ):
+        """Log the final result for the whole scene."""
+
+        row = {
+            "run_id": self.run_id,
+            "timestamp": (
+                datetime.now().isoformat(
+                    timespec="seconds"
+                )
+            ),
+            "method": self.method,
+            "scene_id": self.scene_id,
+            "repetition": self.repetition,
+            "scene_success": int(
+                bool(scene_success)
+            ),
+            "blocks_remaining": int(
+                blocks_remaining
+            ),
+            "notes": notes,
+        }
+
+        self._append_row(
+            self.run_summary_csv,
+            RUN_SUMMARY_FIELDS,
+            row,
+        )

@@ -5,7 +5,7 @@ from robot_sorting.types import Detection
 
 
 def assign_bins(detections: List[Detection]):
-    """Receives all currently detected blocks and assigns them to bins."""
+    """Assign each detection to its configured bin."""
     for det in detections:
         det.bin_name = cfg.COLOUR_TO_BIN.get(det.class_name)
 
@@ -13,27 +13,27 @@ def assign_bins(detections: List[Detection]):
 def choose_next_target(detections: List[Detection]) -> Optional[Detection]:
     """Choose the next target to pick up."""
 
-    # Store pickable targets
+    # Collect valid pick targets.
     pickable = []
 
-    # filters
+    # Filter invalid targets.
     for det in detections:
-        # skip if we don't have a robot position
+        # Robot coordinates are required.
         if det.robot_x is None or det.robot_y is None:
             continue
 
-        # skip if we don't have a bin
+        # A target bin is required.
         if det.bin_name is None:
             continue
 
-        # check if the coordinates are safely in the workspace
+        # Pickup coordinates must be safe.
         if not is_robot_xy_safe(det.robot_x, det.robot_y):
             continue
 
-        # if all the tests pass, add the detection to the list of pickable targets
+        # Keep valid targets.
         pickable.append(det)
 
-    # if no targets are pickable, return None
+    # Nothing can be picked.
     if not pickable:
         return None
 

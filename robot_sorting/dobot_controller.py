@@ -9,7 +9,7 @@ from robot_sorting.types import Detection
 
 
 class DobotController:
-    """ This class is used to control the Dobot Magician Lite"""
+    """Control the Dobot Magician Lite."""
 
     def __init__(self):
         self.device = None
@@ -25,7 +25,7 @@ class DobotController:
 
     @staticmethod
     def find_port():
-        """This method is used to find the port of the Dobot."""
+        """Find the Dobot serial port."""
         ports = list(list_ports.comports())
 
         for p in ports:
@@ -35,9 +35,7 @@ class DobotController:
         for p in ports:
             if "USB" in p.device:
                 return p.device
-        # Can have these:
-        # / dev / ttyACM0
-        # / dev / ttyUSB0
+        # Fall back to the configured default port.
         return cfg.DEFAULT_PORT
 
     def connect(self):
@@ -45,7 +43,7 @@ class DobotController:
         port = self.find_port()
         print(f"Connecting to Dobot on {port}...")
         self.device = Dobot(port=port, verbose=False)
-        # IMPORTANT: TURN OFF SUCTION Immediately after connecting
+        # Always start with suction off.
         self.suction_off()
         time.sleep(0.3)
 
@@ -67,35 +65,35 @@ class DobotController:
         self.device = None
 
     def _send_suction_raw(self, ctrl_enabled, sucked):
-        """Internal helper to send a raw suction control command to the Dobot."""
+        """Send a raw suction command to the Dobot."""
         msg = Message()
-        # Create an empty Dobot protocol message. This ID is the suction control command.
+        # Dobot suction-control command.
         msg.id = 62
-        # Set the control flags for the command.
+        # Set the control flags.
         msg.ctrl = 0x03
-        # This builds the command parameters as bytes.
+        # Build the command parameters.
         msg.params = bytearray([ctrl_enabled, sucked])
-        # Send the command to the Dobot.
+        # Send the command.
         self.device._send_command(msg)
 
     def suction_on(self):
-        """Wrapper around the internal suction on control command."""
+        """Turn suction on."""
         self._send_suction_raw(1, 1)
 
     def suction_off(self):
-        """Wrapper around the internal suction off control command."""
+        """Turn suction off."""
         self._send_suction_raw(0, 0)
 
     def move_pose(self, pose: Pose):
-        """Move the Dobot to the specified pose. and print the new coordinates"""
+        """Move the Dobot to a Pose."""
         print(f"Move pose: X={pose.x:.3f}, Y={pose.y:.3f}, Z={pose.z:.3f}, R={pose.r:.3f}")
-        # wait allows the Dobot to finish moving before returning
+        # Wait for the move to finish.
         self.device.move_to(pose.x, pose.y, pose.z, pose.r, wait=True)
 
     def move_xyz(self, x, y, z, r=cfg.TARGET_R):
-        """Provide coordinates and rotation directly and not a Pose object. to move to X,Y,Z,R"""
+        """Move directly to X, Y, Z and R coordinates."""
         print(f"Move: X={x:.3f}, Y={y:.3f}, Z={z:.3f}, R={r:.3f}")
-        # wait allows the Dobot to finish moving before returning
+        # Wait for the move to finish.
         self.device.move_to(x, y, z, r, wait=True)
 
     def move_camera_clear(self):
@@ -105,17 +103,16 @@ class DobotController:
         self.move_pose(cfg.CAMERA_CLEAR_POSE)
 
     def pick_and_drop(self, detection: Detection, drop_pose: Pose):
-        """perform the entire physical manipulation cycle for one selected block"""
+        """Pick one selected block and move it to its bin."""
 
-        # Check if the detection has robot coordinates
+        # Robot coordinates must already be mapped.
         if detection.robot_x is None or detection.robot_y is None:
             raise RuntimeError("Detection does not have robot coordinates.")
 
-        # copy the coordinates
         robot_x = detection.robot_x
         robot_y = detection.robot_y
 
-        # Check if the coordinates are within the safe workspace
+        # Check the mapped pickup position.
         validate_robot_xy(robot_x, robot_y)
 
         # Build the pickup and drop movement poses.
@@ -124,7 +121,7 @@ class DobotController:
         pick_above = Pose(robot_x, robot_y, cfg.SAFE_Z, cfg.TARGET_R)
         pick_travel = Pose(robot_x, robot_y, travel_z, cfg.TARGET_R)
 
-        # Quick print statements for debugging
+        # Print the planned movement.
         print()
         print("PICK AND DROP")
         print(f"Colour: {detection.class_name}")
@@ -133,40 +130,40 @@ class DobotController:
         print(f"Travel Z: {travel_z:.3f}")
         print()
 
-        # turn off suction
+        # Start with suction off.
         self.suction_off()
         time.sleep(0.2)
 
-        # Move above block
+        # Move above the block.
         self.move_pose(pick_above)
 
-        # Lower to pickup
+        # Lower to pickup height.
         self.move_xyz(robot_x, robot_y, cfg.PICKUP_Z, cfg.TARGET_R)
         time.sleep(cfg.PRE_SUCTION_SETTLE_TIME)
 
-        # Grab
+        # Grab the block.
         print("Suction ON")
         self.suction_on()
         time.sleep(cfg.SUCTION_GRAB_TIME)
 
-        # Lift first to normal safe height
+        # Lift to the safe height.
         self.move_pose(pick_above)
 
-        # Then lift higher before traveling sideways
+        # Lift to travel height.
         self.move_pose(pick_travel)
 
-        # Move above bin at high travel height
+        # Move above the bin.
         self.move_pose(drop_above)
 
-        # Lower to release height
+        # Lower to release height.
         self.move_pose(drop_pose)
 
-        # Release
+        # Release the block.
         print("Suction OFF / release")
         self.suction_off()
         time.sleep(cfg.POST_RELEASE_TIME)
 
-        # Move back above bin before traveling again
+        # Move back above the bin.
         self.move_pose(drop_above)
 
     def get_pose(self) -> Pose:

@@ -3,8 +3,7 @@ from typing import Tuple
 from robot_sorting import config as cfg
 
 
-# This whole file is basically like a bouncer at the door of detections. Detectors.py might find a blob, but this file
-# verifies that the detection actually looks physically plausible.
+# Final checks that a detection is physically plausible.
 
 def bbox_centre(
         x: float,
@@ -46,9 +45,7 @@ def passes_opencv_gate(
         h: int,
         area: float,
 ) -> Tuple[bool, str]:
-    """
-    OpenCV contour validation, this performs blob size, shape, and universal workspace center checks.
-    """
+    """Check OpenCV contour size, shape and workspace position."""
 
     if area < cfg.MIN_AREA:
         return False, f"area too small: {area:.1f}"

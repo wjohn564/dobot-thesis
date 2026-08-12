@@ -9,9 +9,9 @@ from robot_sorting import config as cfg
 
 
 def find_camera_command() -> str:
-    """Check for the Raspberry Pi camera command and return it."""
+    """Return the available Raspberry Pi camera command."""
 
-    # I am trying two commands incase.
+    # Try both Raspberry Pi camera command names.
     for command in [
         "rpicam-still",
         "libcamera-still",
@@ -25,35 +25,33 @@ def find_camera_command() -> str:
 
 
 def capture_image(
-        # filename prefix
         prefix: str,
-        # output directory, defaults to the runtime image directory.
+        # Defaults to the runtime image directory.
         output_dir: Optional[Path] = None,
-        # Control whether the text printed by the raspberry pi camera command is captured and saved to log file
+        # Optional camera command log directory.
         capture_log_dir: Optional[Path] = None,
 
-        # Return image_path and OpenCV image
 ) -> Tuple[Path, np.ndarray]:
     if output_dir is None:
-        # set image directory if none is set
+        # Use the runtime image directory by default.
         output_dir = cfg.IMAGE_DIR
-    # output directory must be a Path object
+    # Normalise the output path.
     output_dir = Path(output_dir)
-    # Make sure the output directory exists
+    # Create the output directory if needed.
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate a timestamp
+    # Timestamp keeps filenames unique.
     timestamp = datetime.now().strftime(
         "%Y%m%d_%H%M%S_%f"
     )
 
-    # Add the prefix and timestamp to the filename
+    # Build the image filename.
     image_path = output_dir / f"{prefix}_{timestamp}.jpg"
 
-    # Use the find camera command to find the raspberry pi camera command
+    # Find the available camera command.
     command = find_camera_command()
 
-    # Build a command to capture an image using the raspberry pi camera command with the specified parameters.
+    # Build the still-image command.
     cmd = [
         command,
         "--nopreview",
@@ -69,48 +67,42 @@ def capture_image(
 
     print(f"Capturing image: {image_path}")
 
-    # Run the command and check for errors.
+    # Run the camera command.
     try:
-        # check if capture_log_dir is None, if it is None, run the command without capturing the log, otherwise capture the log
+        # Capture camera output only when a log directory is supplied.
         if capture_log_dir is None:
             subprocess.run(
                 cmd,
-                # This will raise a CalledProcessError if the command fails.
                 check=True,
             )
         else:
-            # Create the capture log directory if it doesn't exist.
+            # Create the capture log directory.
             capture_log_dir = Path(capture_log_dir)
-            # create the capture log directory if it doesn't exist.
             capture_log_dir.mkdir(
                 parents=True,
                 exist_ok=True,
             )
 
-            # generate log filename
+            # Build the log filename.
             log_path = (
                     capture_log_dir
                     / f"{image_path.stem}_capture.log"
             )
 
-            # open log file
+            # Save camera output to the log file.
             with open(
                     log_path,
-                    # write mode
                     "w",
                     encoding="utf-8",
             ) as log_file:
                 subprocess.run(
                     cmd,
                     check=True,
-                    # capture the log to the log file
                     stdout=log_file,
-                    # put error message in the log file aswell
                     stderr=subprocess.STDOUT,
                     text=True,
                 )
 
-            # Handle a failed camera command.
 
             print(f"Capture log: {log_path}")
 
@@ -120,15 +112,15 @@ def capture_image(
             f"{exc.returncode}."
         ) from exc
 
-    # Check if image was created
+    # Check that the image was created.
     if not image_path.exists():
         raise FileNotFoundError(
             f"Camera did not create: {image_path}"
         )
-    # Load the image using OpenCV
+    # Load the captured image.
     image = cv2.imread(str(image_path))
 
-    # Check if image was loaded
+    # Check that OpenCV loaded it.
     if image is None:
         raise RuntimeError(
             f"OpenCV could not read: {image_path}"

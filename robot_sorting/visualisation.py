@@ -7,7 +7,7 @@ from robot_sorting import config as cfg
 from robot_sorting.types import Detection
 
 
-# This file is used to draw visualisations of the detections
+# Detection preview drawing.
 
 def save_preview(
         image,
@@ -17,7 +17,7 @@ def save_preview(
 ):
     """Save an annotated preview image showing the detected blocks and selected target."""
 
-    # make sure the preview directory exists
+    # Create the preview directory.
     preview_path = Path(preview_path)
     preview_path.parent.mkdir(
         parents=True,
@@ -26,7 +26,7 @@ def save_preview(
 
     preview = image.copy()
 
-    # get image dimensions
+    # Image dimensions.
     img_h, img_w = preview.shape[:2]
 
     # Draw the masking ROI.
@@ -38,10 +38,9 @@ def save_preview(
         2,
     )
 
-    # loop through detections and draw bounding boxes and annotations
+    # Draw each detection.
     for detection in detections:
-        # Get bounding box corners
-        # NOTE: Drawing functions expect ints, so we round the coordinates
+        # OpenCV drawing coordinates must be integers.
         raw_x1 = int(detection.bbox_x)
         raw_y1 = int(detection.bbox_y)
         raw_x2 = int(detection.bbox_x2)
@@ -71,10 +70,10 @@ def save_preview(
         u = int(round(detection.u))
         v = int(round(detection.v))
 
-        # selected detection is highlighted
+        # Highlight the selected detection.
         thickness = 4 if detection is selected else 2
 
-        # Draw bounding box
+        # Draw the bounding box.
         cv2.rectangle(
             preview,
             (x1, y1),
@@ -83,7 +82,7 @@ def save_preview(
             thickness,
         )
 
-        # Draw circle at centre of detection
+        # Mark the detection centre.
         cv2.circle(
             preview,
             (u, v),
@@ -107,7 +106,7 @@ def save_preview(
                 f"{detection.robot_y:.1f})"
             )
 
-        # Mark selected detection
+        # Mark the selected target.
         if detection is selected:
             label = "SELECTED " + label
 
@@ -127,7 +126,7 @@ def save_preview(
         preview,
     )
 
-    # Check if the image was successfully saved
+    # Check that the preview was saved.
     if not success:
         raise RuntimeError(
             f"Failed to save preview: {preview_path}"
